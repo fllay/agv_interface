@@ -3,6 +3,7 @@
 from interactive_markers.interactive_marker_server import InteractiveMarkerServer
 from visualization_msgs.msg import InteractiveMarker, InteractiveMarkerControl, InteractiveMarkerFeedback
 from visualization_msgs.msg import Marker
+from visualization_msgs.msg import MarkerArray
 from geometry_msgs.msg import Quaternion, Pose, Point, Vector3, PoseStamped, PoseWithCovarianceStamped, PoseWithCovariance
 from std_msgs.msg import Header, ColorRGBA
 import rospy
@@ -13,6 +14,9 @@ from agv_interface.srv import slamsrv, slamsrvResponse
 from agv_interface.srv import maps, mapsResponse
 from agv_interface.srv import getpost, getpostResponse
 from agv_interface.srv import savemaps, savemapsResponse
+from agv_interface.srv import waypointsarray, waypointsarrayResponse
+from agv_interface.srv import awaypoint, awaypointResponse
+from agv_interface.srv import waypointname, waypointnameResponse
 
 
 import json
@@ -33,6 +37,10 @@ import Queue
 q_slam = Queue.Queue()
 q_nav = Queue.Queue()
 q_map_name = Queue.Queue()
+q_wayponts = Queue.Queue()
+q_wayponts_names = Queue.Queue()
+
+
 
 def wait_for_time():
     """Wait for simulated time to begin.
@@ -207,16 +215,86 @@ def save_maps(mess):
 
 def get_pose(mess):
     json_str = json_message_converter.convert_ros_message_to_json(waypoint_marker.getPose())
+
+    print json_str
+    print mess
     
     #results = db.search(Todo.Category == 'Home')
-    waypoint_db.insert({'name': 'map', 'id': 1, 'waypoint': json_str})
+    waypoint_db.insert({'mapname': mess.mapname, 'name': mess.name, 'id': mess.seq, 'waypoint': json_str})
+
 
         
 
     print json_str
     return getpostResponse(waypoint_marker.getPose())
 
+def getwaypoints(mess):
+    print mess
+    pp = Query()
+    rel = waypoint_db.search(pp.mapname == mess.name)
+    pose_a = []
+    name_a = []
+   
+    for x in rel:
+        pose_w = json_message_converter.convert_json_to_ros_message('geometry_msgs/Pose', x["waypoint"])
+        pose_a.append(pose_w)
+        name_a.append(x["name"])
 
+
+        #print pose_w
+    #print rel
+
+    q_wayponts.put(pose_a)
+    q_wayponts_names.put(name_a)
+    return waypointsarrayResponse(pose_a)
+
+def getwaypointName(mess):
+    print mess
+    pp = Query()
+    rel = waypoint_db.search(pp.mapname == mess.name)
+    pose_a = []
+   
+    for x in rel:
+        pose_w = x["name"]
+        pose_a.append(pose_w)
+
+        #print pose_w
+    #print rel
+
+
+    return waypointsarrayResponse(pose_a)
+
+def getWaypointname(mess):
+    print mess
+    pp = Query()
+    rel = waypoint_db.search(pp.mapname == mess.mapname)
+    pose_a = []
+    print rel
+   
+    for x in rel:
+        pose_w = x["name"]
+        pose_a.append(pose_w)
+
+        #print pose_w
+    #print rel
+
+
+    return waypointnameResponse(pose_a)
+
+
+def getwayAwaypoint(mess):
+    print mess
+    pp = Query()
+    rel = waypoint_db.search((pp.mapname == mess.mapname) & (pp.name == mess.name))
+    print rel[0]['waypoint']
+    pose1 = json_message_converter.convert_json_to_ros_message('geometry_msgs/Pose', rel[0]['waypoint'])
+
+    return awaypointResponse(pose1)
+
+def listWaypointName(mess):
+    print mess
+    result = [r['mapname'] for r in waypoint_db]
+    return set(result)
 
 def turn_slam_on_off(mess):
  if mess.onezero==1:
@@ -275,6 +353,8 @@ def main():
 
     pub = rospy.Publisher('odometry_goal', Point, queue_size=5)
     marker_publisher = rospy.Publisher('visualization_marker', Marker, queue_size=5)
+    waypoints_publisher = rospy.Publisher('visualization_marker_array', MarkerArray,  queue_size=5)
+    waypoints_publisher_text = rospy.Publisher('visualization_marker_array_text', MarkerArray,  queue_size=5)
     rospy.sleep(0.5)
     server = InteractiveMarkerServer('simple_marker')
     marker1 = DestinationMarker(server, 0, 0, 'dest1', pub)
@@ -283,9 +363,9 @@ def main():
     global waypoint_marker
     waypoint_marker = DestinationMarker(server, 2, -1, 'waypoint', pub)
     marker1.start()
+    marker1.markerOff()
     pose_marker.start()
     waypoint_marker.start()
-
     global waypoint_list
     #marker1.markerOff()
     waypoint_marker.markerOff()
@@ -301,6 +381,10 @@ def main():
     get_map=rospy.Service('get_map', maps,  get_maps ) 
     getpose=rospy.Service('get_pose', getpost,  get_pose) 
     get_map=rospy.Service('save_map', savemaps,  save_maps ) 
+    get_waypoint=rospy.Service('get_waypoint', waypointsarray,  getwaypoints ) 
+    list_waypoint=rospy.Service('list_waypoint', maps,  listWaypointName ) 
+    get_a_waypoint=rospy.Service('get_a_waypoint', awaypoint,  getwayAwaypoint ) 
+    get_waypoint_name=rospy.Service('get_waypoint_name', waypointname,  getWaypointname ) 
 
 
     tfBuffer = tf2_ros.Buffer()
@@ -310,9 +394,15 @@ def main():
     waypoint_db = TinyDB('/home/pi/db.json')
     
    
-    rate = rospy.Rate(10.0)
+    rate = rospy.Rate(20.0)
     is_slam_running = False
     is_nav_running = False
+    wpts = []
+    p_wpts = []
+    markerArray2 = MarkerArray()
+    markerArray3 = MarkerArray()
+    p_waypoint_length = 0
+    print("Start loop")  
     while not rospy.is_shutdown():
         if not q_slam.empty():
             status =  q_slam.get()
@@ -355,6 +445,67 @@ def main():
             os.system(bin_cmd)
 
             #subprocess.run(["rosrun", bin_cmd])
+        
+        if not q_wayponts.empty():
+            wpts = q_wayponts.get()
+            wp_names = q_wayponts_names.get()
+            print "========>"
+            print len(wpts)
+            #print wpts
+      
+            markerArray2.markers = []
+            markerArray3.markers = []
+            id = 0
+            id_t = len(wpts) + 1
+            i = 0
+            for x in wpts:
+                #marker = 
+                markerArray2.markers.append(Marker(
+                    type=Marker.ARROW,
+                    id=id,
+                    pose= x,
+                    scale=Vector3(0.2, 0.2, 0.2),
+                    header=Header(frame_id='map'),
+                    color=ColorRGBA(1.0, 1.0, 0.0, 1.0),
+                    text="AGV"))
+           
+        
+                
+                ik_pose = Pose()
+                ik_pose.position.x = x.position.x
+                ik_pose.position.y = x.position.y
+                ik_pose.position.z = x.position.z + 0.1
+                ik_pose.orientation.x = x.orientation.x
+                ik_pose.orientation.y = x.orientation.y
+                ik_pose.orientation.z = x.orientation.z
+                ik_pose.orientation.w = x.orientation.w
+                markerArray3.markers.append(Marker(
+                    type=Marker.TEXT_VIEW_FACING,
+                    id=id_t,
+                    pose=ik_pose,
+                    scale=Vector3(0.3, 0.3, 0.3),
+                    header=Header(frame_id='map'),
+                    color=ColorRGBA(0.0, 0.1, 1.0, 1.0),
+                    text=wp_names[i]))
+                
+                i = i + 1
+
+                    
+                id += 1
+                id_t += 1
+
+            p_waypoint_length = len(wpts)
+            p_wpts = wpts
+            
+                
+            
+            #print markerArray3
+
+            waypoints_publisher.publish(markerArray2)
+            waypoints_publisher_text.publish(markerArray3)
+
+
+         
 
         
         try:
@@ -367,13 +518,14 @@ def main():
                 scale=Vector3(0.2, 0.2, 0.2),
                 header=Header(frame_id='map'),
                 color=ColorRGBA(0.0, 1.0, 0.0, 1.0),
-                text="Hello world")
+                text="AGV")
             marker_publisher.publish(marker)
         except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
-            #rate.sleep()
-            continue
+            rate.sleep()
+            #continue
+        #print("loop")    
         rate.sleep()
- 
+    #rospy.sleep(0.1)
 
     #rospy.spin()
 

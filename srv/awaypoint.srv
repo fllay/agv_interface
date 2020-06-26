@@ -1,5 +1,4 @@
-string mapname
 string name
-int8 seq
+string mapname
 ---
 geometry_msgs/Pose pose
