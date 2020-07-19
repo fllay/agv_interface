@@ -17,6 +17,8 @@ from agv_interface.srv import savemaps, savemapsResponse
 from agv_interface.srv import waypointsarray, waypointsarrayResponse
 from agv_interface.srv import awaypoint, awaypointResponse
 from agv_interface.srv import waypointname, waypointnameResponse
+from agv_interface.srv import deletemap, deletemapResponse
+from agv_interface.srv import deletewaypoint, deletewaypointResponse
 
 
 import json
@@ -87,7 +89,7 @@ class DestinationMarker(object):
         self.int_marker.name = self._name
         self.int_marker.pose.position.x = self._x
         self.int_marker.pose.position.y = self._y
-        self.int_marker.pose.position.z = 0.01
+        self.int_marker.pose.position.z = 0.1
         self.int_marker.pose.orientation.w = 1
         self.int_marker.description = self._name
 
@@ -296,6 +298,32 @@ def listWaypointName(mess):
     result = [r['mapname'] for r in waypoint_db]
     return set(result)
 
+def deleteMap(mess):
+    print mess
+    f_path_m = '/home/pi/linorobot_ws/src/linorobot/maps/'+mess.mapfile+'.pgm'
+    f_path_y = '/home/pi/linorobot_ws/src/linorobot/maps/'+mess.mapfile+'.yaml'
+    print f_path_m
+    print f_path_y
+
+    if os.path.exists(f_path_m):
+        os.remove(f_path_m)
+    else:
+        print("The file does not exist")
+
+    if os.path.exists(f_path_y):
+        os.remove(f_path_y)
+    else:
+        print("The file does not exist")
+    
+    return 'OK'
+
+def deleteWaypoint(mess):
+    print mess
+    mapName = Query()
+    #waypoint_db
+    waypoint_db.remove((mapName.mapname ==  mess.mapfile) & (mapName.name ==  mess.waypoint))
+    return 'OK'
+
 def turn_slam_on_off(mess):
  if mess.onezero==1:
     q_slam.put(1)
@@ -386,6 +414,9 @@ def main():
     get_a_waypoint=rospy.Service('get_a_waypoint', awaypoint,  getwayAwaypoint ) 
     get_waypoint_name=rospy.Service('get_waypoint_name', waypointname,  getWaypointname ) 
 
+    delete_map=rospy.Service('delete_map', deletemap,  deleteMap) 
+    delete_waypoint=rospy.Service('delete_waypoint', deletewaypoint,  deleteWaypoint) 
+
 
     tfBuffer = tf2_ros.Buffer()
     listener = tf2_ros.TransformListener(tfBuffer)
@@ -452,9 +483,48 @@ def main():
             print "========>"
             print len(wpts)
             #print wpts
-      
-            markerArray2.markers = []
-            markerArray3.markers = []
+            mk_length = len(markerArray2.markers)
+            id = 0
+            id_t = len(markerArray2.markers) + 1
+            i = 0
+            del markerArray2.markers[:]
+            del markerArray3.markers[:]
+            for x in range(0, mk_length):
+                #marker = 
+                markerArray2.markers.append(Marker(
+                    type=Marker.ARROW,
+                    id=id,
+                    action=2,
+                    scale=Vector3(0.2, 0.2, 0.2),
+                    header=Header(frame_id='map'),
+                    color=ColorRGBA(1.0, 1.0, 0.0, 1.0),
+                    text="AGV"))
+
+
+                markerArray3.markers.append(Marker(
+                    type=Marker.TEXT_VIEW_FACING,
+                    id=id_t,
+                    action=2,
+                    scale=Vector3(0.3, 0.3, 0.3),
+                    header=Header(frame_id='map'),
+                    color=ColorRGBA(0.0, 0.1, 1.0, 1.0),
+                    text="null"))
+                
+                i = i + 1
+
+                    
+                id += 1
+                id_t += 1
+
+
+            waypoints_publisher.publish(markerArray2)
+            waypoints_publisher_text.publish(markerArray3)
+            print "clear========>"
+
+            del markerArray2.markers[:]
+            del markerArray3.markers[:]
+            #markerArray2.markers = []
+            #markerArray3.markers = []
             id = 0
             id_t = len(wpts) + 1
             i = 0
@@ -464,6 +534,7 @@ def main():
                     type=Marker.ARROW,
                     id=id,
                     pose= x,
+                    lifetime = rospy.Duration.from_sec(1),
                     scale=Vector3(0.2, 0.2, 0.2),
                     header=Header(frame_id='map'),
                     color=ColorRGBA(1.0, 1.0, 0.0, 1.0),

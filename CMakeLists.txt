@@ -69,6 +69,8 @@ add_service_files(
    waypointsarray.srv 
    waypointname.srv
    awaypoint.srv
+   deletewaypoint.srv
+   deletemap.srv
 )
 
 ## Generate actions in the 'action' folder
