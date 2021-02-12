@@ -22,9 +22,12 @@ from agv_interface.srv import deletewaypoint, deletewaypointResponse
 
 
 import json
+import socket
+
 from tinydb import TinyDB, Query
 
 import os
+
 import tf2_ros
 import geometry_msgs.msg
 import tf2_geometry_msgs
@@ -457,16 +460,32 @@ def main():
                 if is_slam_running == False:
                     uuid = roslaunch.rlutil.get_or_generate_uuid(None, False)
                     roslaunch.configure_logging(uuid)
+                    hostname = socket.gethostname()
                     cli_args = ["/home/pi/linorobot_ws/src/linorobot/launch/navigate.launch", "map_file:=/home/pi/linorobot_ws/src/linorobot/maps/" + nav_status["mapname"] +".yaml"]
                     roslaunch_args = cli_args[1:]
                     roslaunch_file = [(roslaunch.rlutil.resolve_launch_arguments(cli_args)[0], roslaunch_args)]
                     launch_nav = roslaunch.parent.ROSLaunchParent(uuid, roslaunch_file)  #map_file
                     launch_nav.start()
+                    print(hostname)                    
+                    
+                    
+                    uuid2 = roslaunch.rlutil.get_or_generate_uuid(None, False)
+                    roslaunch.configure_logging(uuid2)
+                    hostname = socket.gethostname()
+                    cli_args2 = ["/home/pi/linorobot_ws/src/linorobot/launch/multimaster.launch", "robot_name:=" + hostname]
+                    roslaunch_args2 = cli_args2[1:]
+                    roslaunch_file2 = [(roslaunch.rlutil.resolve_launch_arguments(cli_args2)[0], roslaunch_args2)]
+                    launch_nav2 = roslaunch.parent.ROSLaunchParent(uuid2, roslaunch_file2)  #map_file
+                    launch_nav2.start()
+
+
+
                     is_nav_running = True
                     print("start")
             else:
                 if is_nav_running == True:
                     launch_nav.shutdown()
+                    launch_nav2.shutdown()
                     is_nav_running = False
                     print("stop")
         if not q_map_name.empty():

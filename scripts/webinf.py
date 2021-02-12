@@ -4,6 +4,11 @@ from flask_cors import CORS, cross_origin
 import os
 import json
 import subprocess as sp
+import base64
+from PIL import Image
+import io
+from io import BytesIO
+
 app = Flask(__name__)
 
 CORS(app)
@@ -89,6 +94,27 @@ def get_data():
    else:
       raise RuntimeError("Weird - don't know how to handle method {}".format(request.method))
 
+
+@app.route('/getMap', methods = ['GET', 'POST'])
+def getMap():
+   
+   if request.method == 'POST':
+      data = request.get_json()
+      im = Image.open("/home/pi/linorobot_ws/src/linorobot/maps/" + data["mapname"])
+      file_object = io.BytesIO()
+      im.save(file_object, 'PNG')
+
+      #with open("/home/pi/linorobot_ws/src/linorobot/maps/" + data["mapname"], "rb") as imageFile:
+      #   encoded_img = base64.b64encode(imageFile.read())
+
+      file_object.seek(0)
+
+      encoded_img = base64.b64encode(file_object.getvalue()).decode('ascii')
+      res =  { 'Status' : 'Success', 'ImageBytes': encoded_img}
+
+      return jsonify(res), 201
+   else:
+      raise RuntimeError("Weird - don't know how to handle method {}".format(request.method))
 
 if __name__ == '__main__':
    app.run(debug = True, host='0.0.0.0')
