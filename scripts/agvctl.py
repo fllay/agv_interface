@@ -383,7 +383,9 @@ def main():
     pub_init_pose = rospy.Publisher('initialpose', PoseWithCovarianceStamped, queue_size=1)
 
     pub = rospy.Publisher('odometry_goal', Point, queue_size=5)
+    hostname = socket.gethostname()
     marker_publisher = rospy.Publisher('visualization_marker', Marker, queue_size=5)
+    marker_publisher_host = rospy.Publisher(hostname + '/visualization_marker', Marker, queue_size=5)
     waypoints_publisher = rospy.Publisher('visualization_marker_array', MarkerArray,  queue_size=5)
     waypoints_publisher_text = rospy.Publisher('visualization_marker_array_text', MarkerArray,  queue_size=5)
     rospy.sleep(0.5)
@@ -472,11 +474,10 @@ def main():
                     uuid2 = roslaunch.rlutil.get_or_generate_uuid(None, False)
                     roslaunch.configure_logging(uuid2)
                     hostname = socket.gethostname()
-                    cli_args2 = ["/home/pi/linorobot_ws/src/linorobot/launch/multimaster.launch", "robot_name:=" + hostname]
+                    cli_args2 = ["/home/pi/linorobot_ws/src/mqtt_bridge/launch/demo.launch"]
                     roslaunch_args2 = cli_args2[1:]
                     roslaunch_file2 = [(roslaunch.rlutil.resolve_launch_arguments(cli_args2)[0], roslaunch_args2)]
                     launch_nav2 = roslaunch.parent.ROSLaunchParent(uuid2, roslaunch_file2)  #map_file
-                    launch_nav2.start()
 
 
 
@@ -600,6 +601,7 @@ def main():
         
         try:
             point_odom = tfBuffer.lookup_transform('map', 'base_footprint', rospy.Time(0))
+            hhname = socket.gethostname()
             marker = Marker(
                 type=Marker.ARROW,
                 id=0,
@@ -608,8 +610,9 @@ def main():
                 scale=Vector3(0.2, 0.2, 0.2),
                 header=Header(frame_id='map'),
                 color=ColorRGBA(0.0, 1.0, 0.0, 1.0),
-                text="AGV")
+                text=hhname)
             marker_publisher.publish(marker)
+            marker_publisher_host.publish(marker)
         except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
             rate.sleep()
             #continue

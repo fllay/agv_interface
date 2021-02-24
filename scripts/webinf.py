@@ -8,6 +8,8 @@ import base64
 from PIL import Image
 import io
 from io import BytesIO
+import yaml
+import socket
 
 app = Flask(__name__)
 
@@ -115,6 +117,36 @@ def getMap():
       return jsonify(res), 201
    else:
       raise RuntimeError("Weird - don't know how to handle method {}".format(request.method))
+
+@app.route('/config', methods = ['GET', 'POST'])
+def config():
+   if request.method == 'POST':
+      data = request.get_json()
+      with open(r'/home/pi/linorobot_ws/src/mqtt_bridge/config/demo_params.yaml') as file:
+         documents = yaml.full_load(file)
+         items = documents.items()
+
+         for item, doc in documents.items():
+            print(item, ":", doc)
+      print("-------------------")
+      print(documents['mqtt']['connection']['host'])
+
+      hostname = socket.gethostname()
+
+      documents['mqtt']['connection']['host'] = data['central_ip']
+      documents['bridge'][0]['topic_from'] = '/' + hostname + '/visualization_marker'
+      documents['bridge'][0]['topic_to'] = '/'/ + hostname + '/visualization_marker'
+
+      with open(r'/home/pi/linorobot_ws/src/mqtt_bridge/config/demo_params.yaml', 'w') as file:
+         doc = yaml.dump(documents, file)
+
+      res =  { 'Status' : 'Success'}
+
+      return jsonify(res), 201
+   else:
+      raise RuntimeError("Weird - don't know how to handle method {}".format(request.method))
+
+   
 
 if __name__ == '__main__':
    app.run(debug = True, host='0.0.0.0')
