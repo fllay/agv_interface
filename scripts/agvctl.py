@@ -45,7 +45,7 @@ q_map_name = Queue.Queue()
 q_wayponts = Queue.Queue()
 q_wayponts_names = Queue.Queue()
 
-
+MAP_PATH = '/home/pi/linorobot_ws/src/linorobot/maps'
 
 def wait_for_time():
     """Wait for simulated time to begin.
@@ -193,7 +193,7 @@ def get_maps(mess):
     print "get map"
     file_names = []
 
-    for r, d, f in os.walk('/home/pi/linorobot_ws/src/linorobot/maps'):
+    for r, d, f in os.walk(MAP_PATH):
         for file in f:
             if ".yaml" in file:
                 filename, file_extension = os.path.splitext(file)
@@ -225,10 +225,14 @@ def get_pose(mess):
     print mess
     
     #results = db.search(Todo.Category == 'Home')
-    waypoint_db.insert({'mapname': mess.mapname, 'name': mess.name, 'id': mess.seq, 'waypoint': json_str})
+    #waypoint_db.insert({'mapname': mess.mapname, 'name' : mess.name, 'id': mess.seq, 'waypoint': json_str})
+    with open(os.path.join(MAP_PATH, mess.mapname + '.json')) as json_file:
+        data = json.load(json_file)
 
+    data[mess.name] = json_message_converter.convert_ros_message_to_json(waypoint_marker.getPose())
 
-        
+    with open(os.path.join(MAP_PATH, mess.mapname + '.json'), 'w') as fp:
+            json.dump(data, fp)
 
     print json_str
     return getpostResponse(waypoint_marker.getPose())
@@ -236,75 +240,74 @@ def get_pose(mess):
 def getwaypoints(mess):
     print mess
     pp = Query()
-    rel = waypoint_db.search(pp.mapname == mess.name)
-    pose_a = []
-    name_a = []
+    pose_a1 = []
+    name_a1 = []
    
-    for x in rel:
-        pose_w = json_message_converter.convert_json_to_ros_message('geometry_msgs/Pose', x["waypoint"])
-        pose_a.append(pose_w)
-        name_a.append(x["name"])
+    with open(os.path.join(MAP_PATH, mess.name + '.json')) as json_file:
+        data = json.load(json_file)
 
+    for key, val in data.items():
+        pose_w = json_message_converter.convert_json_to_ros_message('geometry_msgs/Pose', val)
+        pose_a1.append(pose_w)
+        name_a1.append(key)
+    
+    print pose_a1
+    print name_a1
 
-        #print pose_w
-    #print rel
-
-    q_wayponts.put(pose_a)
-    q_wayponts_names.put(name_a)
-    return waypointsarrayResponse(pose_a)
+    q_wayponts.put(pose_a1)
+    q_wayponts_names.put(name_a1)
+    return waypointsarrayResponse(pose_a1)
 
 def getwaypointName(mess):
     print mess
-    pp = Query()
-    rel = waypoint_db.search(pp.mapname == mess.name)
-    pose_a = []
+    pose_a1 = []
+    with open(os.path.join(MAP_PATH, mess.name + '.json')) as json_file:
+        data = json.load(json_file)
+
+    for key, val in data.items():
+        pose_a1.append(key)
    
-    for x in rel:
-        pose_w = x["name"]
-        pose_a.append(pose_w)
 
         #print pose_w
     #print rel
 
 
-    return waypointsarrayResponse(pose_a)
+    return waypointsarrayResponse(pose_a1)
 
 def getWaypointname(mess):
     print mess
-    pp = Query()
-    rel = waypoint_db.search(pp.mapname == mess.mapname)
-    pose_a = []
-    print rel
+    pose_a1 = []
    
-    for x in rel:
-        pose_w = x["name"]
-        pose_a.append(pose_w)
+    with open(os.path.join(MAP_PATH, mess.mapname + '.json')) as json_file:
+        data = json.load(json_file)
 
-        #print pose_w
-    #print rel
+    for key, val in data.items():
+        pose_a1.append(key)
+     
 
 
-    return waypointnameResponse(pose_a)
+    return waypointnameResponse(pose_a1)
 
 
 def getwayAwaypoint(mess):
     print mess
-    pp = Query()
-    rel = waypoint_db.search((pp.mapname == mess.mapname) & (pp.name == mess.name))
-    print rel[0]['waypoint']
-    pose1 = json_message_converter.convert_json_to_ros_message('geometry_msgs/Pose', rel[0]['waypoint'])
+
+
+    with open(os.path.join(MAP_PATH, mess.mapname + '.json')) as json_file:
+        data = json.load(json_file)
+
+
+    pose1 = json_message_converter.convert_json_to_ros_message('geometry_msgs/Pose', data[mess.name])
 
     return awaypointResponse(pose1)
 
-def listWaypointName(mess):
-    print mess
-    result = [r['mapname'] for r in waypoint_db]
-    return set(result)
+
 
 def deleteMap(mess):
     print mess
-    f_path_m = '/home/pi/linorobot_ws/src/linorobot/maps/'+mess.mapfile+'.pgm'
-    f_path_y = '/home/pi/linorobot_ws/src/linorobot/maps/'+mess.mapfile+'.yaml'
+    f_path_m = MAP_PATH +  '/' + mess.mapfile+'.pgm'
+    f_path_y = MAP_PATH +  '/' + mess.mapfile+'.yaml'
+    f_path_j = MAP_PATH +  '/' + mess.mapfile+'.json'
     print f_path_m
     print f_path_y
 
@@ -318,13 +321,23 @@ def deleteMap(mess):
     else:
         print("The file does not exist")
     
+    if os.path.exists(f_path_j):
+        os.remove(f_path_j)
+    else:
+        print("The file does not exist")
+
     return 'OK'
 
 def deleteWaypoint(mess):
     print mess
-    mapName = Query()
-    #waypoint_db
-    waypoint_db.remove((mapName.mapname ==  mess.mapfile) & (mapName.name ==  mess.waypoint))
+
+
+    with open(os.path.join(MAP_PATH, mess.mapfile + '.json')) as json_file:
+        data = json.load(json_file)
+    del data[mess.waypoint]
+
+    with open(os.path.join(MAP_PATH, mess.mapfile + '.json'), 'w') as fp:
+        json.dump(data, fp)
     return 'OK'
 
 def turn_slam_on_off(mess):
@@ -415,7 +428,6 @@ def main():
     getpose=rospy.Service('get_pose', getpost,  get_pose) 
     get_map=rospy.Service('save_map', savemaps,  save_maps ) 
     get_waypoint=rospy.Service('get_waypoint', waypointsarray,  getwaypoints ) 
-    list_waypoint=rospy.Service('list_waypoint', maps,  listWaypointName ) 
     get_a_waypoint=rospy.Service('get_a_waypoint', awaypoint,  getwayAwaypoint ) 
     get_waypoint_name=rospy.Service('get_waypoint_name', waypointname,  getWaypointname ) 
 
@@ -425,10 +437,6 @@ def main():
 
     tfBuffer = tf2_ros.Buffer()
     listener = tf2_ros.TransformListener(tfBuffer)
-
-    global waypoint_db
-    waypoint_db = TinyDB('/home/pi/db.json')
-    
    
     rate = rospy.Rate(20.0)
     is_slam_running = False
@@ -490,10 +498,17 @@ def main():
                     is_nav_running = False
                     print("stop")
         if not q_map_name.empty():
-            bin_cmd = 'rosrun map_server map_saver -f /home/pi/linorobot_ws/src/linorobot/maps/' +  q_map_name.get()
+            mapname = q_map_name.get()
+            bin_cmd = 'rosrun map_server map_saver -f /home/pi/linorobot_ws/src/linorobot/maps/' +  mapname
             print bin_cmd
 
             os.system(bin_cmd)
+
+            data = {}
+
+            with open(os.path.join(MAP_PATH, mapname + '.json'), 'w') as fp:
+                json.dump(data, fp)
+
 
             #subprocess.run(["rosrun", bin_cmd])
         
