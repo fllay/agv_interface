@@ -479,13 +479,13 @@ def main():
                     print(hostname)                    
                     
                     
-                    uuid2 = roslaunch.rlutil.get_or_generate_uuid(None, False)
-                    roslaunch.configure_logging(uuid2)
-                    hostname = socket.gethostname()
-                    cli_args2 = ["/home/pi/linorobot_ws/src/mqtt_bridge/launch/demo.launch"]
-                    roslaunch_args2 = cli_args2[1:]
-                    roslaunch_file2 = [(roslaunch.rlutil.resolve_launch_arguments(cli_args2)[0], roslaunch_args2)]
-                    launch_nav2 = roslaunch.parent.ROSLaunchParent(uuid2, roslaunch_file2)  #map_file
+                    #uuid2 = roslaunch.rlutil.get_or_generate_uuid(None, False)
+                    #roslaunch.configure_logging(uuid2)
+                    #hostname = socket.gethostname()
+                    #cli_args2 = ["/home/pi/linorobot_ws/src/mqtt_bridge/launch/demo.launch"]
+                    #roslaunch_args2 = cli_args2[1:]
+                    #roslaunch_file2 = [(roslaunch.rlutil.resolve_launch_arguments(cli_args2)[0], roslaunch_args2)]
+                    #launch_nav2 = roslaunch.parent.ROSLaunchParent(uuid2, roslaunch_file2)  #map_file
 
 
 
@@ -494,7 +494,7 @@ def main():
             else:
                 if is_nav_running == True:
                     launch_nav.shutdown()
-                    launch_nav2.shutdown()
+                    #launch_nav2.shutdown()
                     is_nav_running = False
                     print("stop")
         if not q_map_name.empty():
