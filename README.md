@@ -71,5 +71,25 @@ bridge:
 ```
 
 
+#Robot mqtt bridge
+
+```
+bridge:
+- factory: mqtt_bridge.bridge:RosToMqttBridge
+  msg_type: visualization_msgs.msg:Marker
+  topic_from: /eru/visualization_marker
+  topic_to: /eru/visualization_marker
+deserializer: msgpack:loads
+mqtt:
+  client:
+    protocol: 4
+  connection:
+    host: 192.168.68.107
+    keepalive: 60
+    port: 1883
+  private_path: device/001
+serializer: msgpack:dumps
+
+```
 
 
