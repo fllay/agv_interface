@@ -93,3 +93,8 @@ serializer: msgpack:dumps
 ```
 
 
+Add this line to `/usr/sbin/linorobot-start` by using `sudo pico /usr/sbin/linorobot-start`
+
+```sudo -HE env PATH=$PATH PYTHONPATH=$PYTHONPATH /home/pi/linorobot_ws/src/agv_interface/scripts/rosio.py&```
+
+
