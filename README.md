@@ -93,6 +93,12 @@ serializer: msgpack:dumps
 ```
 
 # Enable gpio node at start
+Enable `rosio.py` to start as `sudo` without asking for password 
+```
+cd /home/pi/linorobot_ws/src/agv_interface/scripts/
+sudo chmod u-s rosio.py 
+```
+
 Add this line to `/usr/sbin/linorobot-start` by using `sudo pico /usr/sbin/linorobot-start`
 
 ```sudo -HE env PATH=$PATH PYTHONPATH=$PYTHONPATH /home/pi/linorobot_ws/src/agv_interface/scripts/rosio.py&```
