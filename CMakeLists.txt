@@ -65,12 +65,15 @@ add_service_files(
    slamsrv.srv
    maps.srv
    getpost.srv
-   savemaps.srv
+   savemaps.srv 
+   savepaths.srv
+   getpaths.srv	
    waypointsarray.srv 
    waypointname.srv
    awaypoint.srv
    deletewaypoint.srv
    deletemap.srv
+   slammapsrv.srv
 )
 
 ## Generate actions in the 'action' folder
@@ -176,6 +179,7 @@ include_directories(
 install(PROGRAMS
    scripts/agvctl.py
    scripts/webinf.py
+   scripts/mbf_relay.py
    DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
