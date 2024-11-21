@@ -1,0 +1,6 @@
+<launch>    
+    <node name="proxy" pkg="interactive_marker_proxy" type="proxy" output="screen">
+        <param name="topic_ns" type="string" value="/simple_marker"/>
+        <param name="target_frame" type="string" value="/map"/>
+    </node>
+</launch>

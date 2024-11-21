@@ -1,0 +1,4 @@
+<launch>
+    <node pkg="agv_interface" name="path_nav" type="path_nav.py" output="screen">
+    </node>
+</launch>

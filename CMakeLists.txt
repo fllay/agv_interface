@@ -13,6 +13,7 @@ find_package(catkin REQUIRED COMPONENTS
   std_msgs
   message_generation
   geometry_msgs
+  custom_msgs
 )
 
 ## System dependencies are found with CMake's conventions
@@ -65,12 +66,19 @@ add_service_files(
    slamsrv.srv
    maps.srv
    getpost.srv
-   savemaps.srv
+   savemaps.srv 
+   savepaths.srv
+   getpaths.srv	
    waypointsarray.srv 
    waypointname.srv
    awaypoint.srv
    deletewaypoint.srv
    deletemap.srv
+   slammapsrv.srv
+   getrcvpoint.srv
+   savercvpoint.srv
+   saveobstacles.srv
+   getobstacles.srv
 )
 
 ## Generate actions in the 'action' folder
@@ -85,6 +93,7 @@ generate_messages(
    DEPENDENCIES
    std_msgs
    geometry_msgs
+   custom_msgs
 )
 
 ################################################
@@ -119,8 +128,9 @@ generate_messages(
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES agv_interface
-#  CATKIN_DEPENDS roscpp rospy std_msgs
+#   CATKIN_DEPENDS roscpp rospy std_msgs custom_msgs
 #  DEPENDS system_lib
+
 )
 
 ###########
@@ -176,6 +186,8 @@ include_directories(
 install(PROGRAMS
    scripts/agvctl.py
    scripts/webinf.py
+   scripts/mbf_relay.py
+   script/plcinf.py
    DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 

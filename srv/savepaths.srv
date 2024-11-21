@@ -1,0 +1,5 @@
+string mapfile
+string pathName
+geometry_msgs/PoseArray path_array
+---
+string status
